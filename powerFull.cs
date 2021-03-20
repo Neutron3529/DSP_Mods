@@ -8,7 +8,7 @@ dotnet /usr/share/dotnet/sdk/5.0.201/Roslyn/bincore/csc.dll -t:library \
   -r:'../DSPGAME_Data/Managed/UnityEngine.CoreModule.dll' \
   -r:'../DSPGAME_Data/Managed/mscorlib.dll' \
   -r:'../DSPGAME_Data/Managed/Assembly-CSharp.dll' \
-  PowerFull.cs \
+  powerFull.cs \
   -out:'../BepInEx/plugins/powerfull.dll' \
   -optimize \
   -define:DEBUG # optional
