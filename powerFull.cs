@@ -27,24 +27,47 @@ namespace PowerFull
     [BepInPlugin("Neutron3529.PowerFull", "PowerFull", "0.1.0")]
     public class PowerFull : BaseUnityPlugin {
         public static float power_mul=10.0f;
-        public static float max_mining_cost=0.0f;
-        public static int extra_sand_mul=1;//额外沙土数量，垃圾桶用
+        public static double mecha_core_power_gen_mul = 1.0;
+        public static float logistic_drone_speed_mul = 1.0f;
+        public static float logistic_ship_sail_speed_mul = 1.0f;
+        public static float logistic_ship_warp_speed_mul = 1.0f;
+        public static float max_mining_cost = 1.0f;
+        public static int extra_sand_mul = 1;//额外沙土数量，垃圾桶用
         public static Player player;//用于各种神奇操作
         public static Traverse sand_count;
         public static bool enable1=true;
         public static bool enable2=true;
         public static bool enable3=true;
+        public static double mechaCorePowerGen = 18000.0;
+        public static float logisticDroneSpeed = 8.0f;
+        public static float logisticShipSailSpeed = 400.0f;
+        public static float logisticShipWarpSpeed = 400000.0f;
 #if DEBUG
         public static Action<string> logger;
 #endif
         void Start() {
-            enable2 = Config.Bind<bool>("config", "enable_power_mul", true, "开启电力乘数patch").Value;
+            mechaCorePowerGen = Configs.freeMode.mechaCorePowerGen;
+            logisticDroneSpeed = Configs.freeMode.logisticDroneSpeed;
+            logisticShipSailSpeed = Configs.freeMode.logisticShipSailSpeed;
+            logisticShipWarpSpeed = Configs.freeMode.logisticShipWarpSpeed;
+
+            enable2 = Config.Bind<bool>("config", "enable_power_mul", false, "开启电力乘数patch").Value;
             power_mul = Config.Bind<float>("config", "power_mul", 10.0f, "电力乘数").Value;
 
-            enable1 = Config.Bind<bool>("config", "enable_max_mining_cost", true, "开启挖矿消耗比例patch").Value;
-            max_mining_cost = Config.Bind<float>("config", "max_mining_cost", 0.0f, "挖矿消耗矿物比例的最大值，可以设为0以阻止采矿机消耗矿物").Value;
-            if (!enable1){max_mining_cost=1.0f;/*此时max_mining_cost的注入仍然存在，但已经失活*/}
-            enable3 = Config.Bind<bool>("config", "enable_extra_sand_mul", true, "开启垃圾箱patch").Value;
+            enable1 = Config.Bind<bool>("config", "enable_tech_modding", false, "开启科技效果修改patch").Value;
+            mecha_core_power_gen_mul = Config.Bind<double>("config", "mecha_core_power_gen_mul", 1000.0f, "机甲核心生成能量的速度乘数，会影响存档！").Value;
+            logistic_drone_speed_mul = Config.Bind<float>("config", "logistic_drone_speed_mul", 10.0f, "行星内运输机速度乘数，会影响存档！").Value;
+            logistic_ship_sail_speed_mul = Config.Bind<float>("config", "logistic_ship_sail_speed_mul", 3000.0f, "星际运输机速度乘数，会影响存档！").Value;
+            logistic_ship_warp_speed_mul = Config.Bind<float>("config", "logistic_ship_warp_speed_mul", 5.0f, "星际运输机翘曲速度乘数，会影响存档！").Value;
+            max_mining_cost = Config.Bind<float>("config", "max_mining_cost", 0.0f, "挖矿消耗矿物比例的最大值，可以设为0以阻止采矿机消耗矿物，会影响存档！").Value;
+            if (!enable1){/*此时注入仍然存在，但已经失活*/
+                mecha_core_power_gen_mul=1.0;
+                logistic_drone_speed_mul=1.0f;
+                logistic_ship_sail_speed_mul=1.0f;
+                logistic_ship_warp_speed_mul=1.0f;
+                max_mining_cost=1.0f;
+            }
+            enable3 = Config.Bind<bool>("config", "enable_extra_sand_mul", false, "开启垃圾箱patch").Value;
             extra_sand_mul = Config.Bind<int>("config", "extra_sand_mul", 1, "垃圾箱中每物品转化为沙土的数量").Value;
             var harmony=new Harmony("Neutron3529.Powerful");
 #if DEBUG
@@ -57,7 +80,7 @@ namespace PowerFull
 #if DEBUG
                 logger("PowerFull-GameData.Import-注入完成");
                 if (enable1){
-                    logger("PowerFull-采矿无消耗-加载完成");
+                    logger("PowerFull-科技效果修改-加载完成");
                 }
 #endif
             }
@@ -69,7 +92,7 @@ namespace PowerFull
                 logger("PowerFull-电力x10-加载完成");
 #endif
             }
-            if (enable3){// 垃圾桶&&弃水罐
+            if (enable3){// 垃圾桶
                 var original = typeof(StorageComponent).GetMethod("AddItem", new [] { typeof(int),typeof(int), typeof(bool) });
                 var prefix = typeof(StorageComponentAddItemPatch).GetMethod("Prefix");
                 harmony.Patch(original, new HarmonyMethod(prefix));
@@ -86,7 +109,47 @@ namespace PowerFull
             public static void Postfix(GameData __instance){
                 player = __instance.mainPlayer;
                 sand_count = Traverse.Create(player).Field("<sandCount>k__BackingField");
-                if (__instance.history.miningCostRate > max_mining_cost ){
+                if (__instance.mainPlayer.mecha.corePowerGen != mechaCorePowerGen * mecha_core_power_gen_mul && enable1){
+#if DEBUG
+                    logger(string.Format("mechaCorePowerGen的原始值为{0:N5}，触发修改，新值为{1:N5}", __instance.mainPlayer.mecha.corePowerGen, mechaCorePowerGen * mecha_core_power_gen_mul));
+#endif
+                    __instance.mainPlayer.mecha.corePowerGen = mechaCorePowerGen * mecha_core_power_gen_mul;
+#if DEBUG
+                }else{
+                    logger(string.Format("mechaCorePowerGen的原始值为{0:N5}，新值为{1:N5}，未触发修改", __instance.mainPlayer.mecha.corePowerGen, mechaCorePowerGen * mecha_core_power_gen_mul));
+#endif
+                }
+                if (__instance.history.logisticDroneSpeed != logisticDroneSpeed * logistic_drone_speed_mul && enable1){
+#if DEBUG
+                    logger(string.Format("logisticDroneSpeed的原始值为{0:N5}，触发修改，新值为{1:N5}", __instance.history.logisticDroneSpeed, logisticDroneSpeed * logistic_drone_speed_mul));
+#endif
+                    __instance.history.logisticDroneSpeed = logisticDroneSpeed * logistic_drone_speed_mul;
+#if DEBUG
+                }else{
+                    logger(string.Format("logisticDroneSpeed的原始值为{0:N5}，新值为{1:N5}，未触发修改", __instance.history.logisticDroneSpeed, logisticDroneSpeed * logistic_drone_speed_mul));
+#endif
+                }
+                if (__instance.history.logisticShipSailSpeed != logisticShipSailSpeed * logistic_ship_sail_speed_mul && enable1){
+#if DEBUG
+                    logger(string.Format("logisticShipSailSpeed的原始值为{0:N5}，触发修改，新值为{1:N5}", __instance.history.logisticShipSailSpeed, logisticShipSailSpeed * logistic_ship_sail_speed_mul));
+#endif
+                    __instance.history.logisticShipSailSpeed = logisticShipSailSpeed * logistic_ship_sail_speed_mul;
+#if DEBUG
+                }else{
+                    logger(string.Format("logisticShipSailSpeed的原始值为{0:N5}，新值为{1:N5}，未触发修改", __instance.history.logisticShipSailSpeed, logisticShipSailSpeed * logistic_ship_sail_speed_mul));
+#endif
+                }
+                if (__instance.history.logisticShipWarpSpeed != logisticShipWarpSpeed * logistic_ship_warp_speed_mul && enable1){
+#if DEBUG
+                    logger(string.Format("logisticShipWarpSpeed的原始值为{0:N5}，触发修改，新值为{1:N5}", __instance.history.logisticShipWarpSpeed, logisticShipWarpSpeed * logistic_ship_warp_speed_mul));
+#endif
+                    __instance.history.logisticShipWarpSpeed = logisticShipWarpSpeed * logistic_ship_warp_speed_mul;
+#if DEBUG
+                }else{
+                    logger(string.Format("logisticShipWarpSpeed的原始值为{0:N5}，新值为{1:N5}，未触发修改", __instance.history.logisticShipWarpSpeed, logisticShipWarpSpeed * logistic_ship_warp_speed_mul));
+#endif
+                }
+                if (__instance.history.miningCostRate > max_mining_cost && enable1){
 #if DEBUG
                     logger(string.Format("miningCostRate的原始值为{0:N5}，触发修改，新值为{1:N5}", __instance.history.miningCostRate, max_mining_cost));
 #endif
