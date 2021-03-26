@@ -62,7 +62,7 @@ using System.Collections.Generic;
 
 namespace PowerFull
 {
-    [BepInPlugin("Neutron3529.PowerFull", "PowerFull", "0.1.0")]
+    [BepInPlugin("Neutron3529.PowerFull", "PowerFull", "0.1.1")]
     public class PowerFull : BaseUnityPlugin {
         public static float power_mul=10.0f;
         public static double mecha_core_power_gen_mul = 1.0;
@@ -71,6 +71,7 @@ namespace PowerFull
         public static float logistic_ship_warp_speed_mul = 1.0f;
         public static float max_mining_cost = 1.0f;
         public static int extra_sand_mul = 1;//额外沙土数量，垃圾桶用
+        public static float mechaReplicatePower_add = 1.0f;
         public static Player player;//用于各种神奇操作
         public static Traverse sand_count;
         public static bool enable1=true;
@@ -83,6 +84,7 @@ namespace PowerFull
         public static float logisticShipSailSpeed = 400.0f;
         public static float logisticShipWarpSpeed = 400000.0f;
         public static double belt_speed_mul = 2.0;
+        public static double mechaReplicatePower=1.0;
 #if DEBUG
         public static Action<string> logger;
 #endif
@@ -91,13 +93,15 @@ namespace PowerFull
             logisticDroneSpeed = Configs.freeMode.logisticDroneSpeed;
             logisticShipSailSpeed = Configs.freeMode.logisticShipSailSpeed;
             logisticShipWarpSpeed = Configs.freeMode.logisticShipWarpSpeed;
+            mechaReplicatePower = Configs.freeMode.mechaReplicatePower;
 
-            enable1 = Config.Bind<bool>("config", "enable_tech_modding", false, "开启科技效果修改patch").Value;
+            enable1 = Config.Bind<bool>("config", "enable_tech_modding", false, "开启存档科技效果修改patch（读档时生效，影响整个游戏）").Value;
             mecha_core_power_gen_mul = Config.Bind<double>("config", "mecha_core_power_gen_mul", 1000.0f, "机甲核心生成能量的速度乘数，会影响存档！").Value;
             logistic_drone_speed_mul = Config.Bind<float>("config", "logistic_drone_speed_mul", 10.0f, "行星内运输机速度乘数，会影响存档！").Value;
             logistic_ship_sail_speed_mul = Config.Bind<float>("config", "logistic_ship_sail_speed_mul", 3000.0f, "星际运输机速度乘数，会影响存档！").Value;
             logistic_ship_warp_speed_mul = Config.Bind<float>("config", "logistic_ship_warp_speed_mul", 5.0f, "星际运输机翘曲速度乘数，会影响存档！").Value;
             max_mining_cost = Config.Bind<float>("config", "max_mining_cost", 0.0f, "挖矿消耗矿物比例的最大值，可以设为0以阻止采矿机消耗矿物，会影响存档！").Value;
+            mechaReplicatePower_add = Config.Bind<float>("config", "mechaReplicatePower_add", 1.0f, "机甲合成物品速度乘数，会显著影响制作速度的同时略微影响合成物品时候的能耗，会影响存档！").Value;
 
             enable2 = Config.Bind<bool>("config", "enable_power_mul", false, "开启电力乘数patch").Value;
             power_mul = Config.Bind<float>("config", "power_mul", 10.0f, "电力乘数").Value;
@@ -212,7 +216,18 @@ namespace PowerFull
                     __instance.history.miningCostRate = max_mining_cost;
 #if DEBUG
                 }else{
-                    logger(string.Format("miningCostRate的原始值为{0:N5}，不大于设定的阈值{1:N5}", __instance.history.miningCostRate, max_mining_cost));
+                    logger(string.Format("miningCostRate的原始值为{0:N5}，新值为{1:N5}，未触发修改", __instance.history.miningCostRate, max_mining_cost));
+#endif
+                }
+                if (player.mecha.replicatePower != mechaReplicatePower+(double)mechaReplicatePower_add && enable1){
+#if DEBUG
+                    logger(string.Format("mecha.replicatePower的原始值为{0:N5}，触发修改，新值为{1:N5}，同时mecha.replicateSpeed由{2:N5}修改为{3:N5}", player.mecha.replicatePower,mechaReplicatePower+mechaReplicatePower_add,player.mecha.replicateSpeed,player.mecha.replicateSpeed+(float)(mechaReplicatePower+(double)mechaReplicatePower_add-player.mecha.replicatePower)));
+#endif
+                    player.mecha.replicateSpeed+=(float)(mechaReplicatePower+(double)mechaReplicatePower_add-player.mecha.replicatePower);
+                    player.mecha.replicatePower = mechaReplicatePower+mechaReplicatePower_add;
+#if DEBUG
+                }else{
+                    logger(string.Format("mecha.replicatePower的原始值为{0:N5}，新值为{1:N5}，未触发修改，保持mecha.replicateSpeed的原始值{2:N5}不变", player.mecha.replicatePower,mechaReplicatePower+(double)mechaReplicatePower_add, player.mecha.replicateSpeed));
 #endif
                 }
             }
