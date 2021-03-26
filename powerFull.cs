@@ -1,6 +1,40 @@
-/*
-compile instructions: put this file in `steamapps/common/Dyson Sphere Program/CustomMod` folder, open a terminal in the same folder, and execute:
-dotnet /usr/share/dotnet/sdk/5.0.201/Roslyn/bincore/csc.dll -t:library \
+#!/bin/bash -e
+#   * compile instructions: put this file in
+#   *         `steamapps/common/Dyson Sphere Program/CustomMod`
+#   * folder, open a terminal in the same folder, and execute:
+#   *
+#   * ```
+#   *     chmod +x powerFull.cs
+#   *     ./powerFull.cs
+#   * ```
+#   *
+#   * then the mod will be compiled automatically.
+#   *
+#   * Here we wrote a shebang like file, which is correct
+#   * in my computer (Manjaro XFCE), if such script do not work
+#   * in your computer, you could just try the instructions below :
+
+__MODE_VERBOSE=50 # may be modified, check it carefully.
+__MODE_DEBUG__=51
+__MODE_RELEASE=52
+
+case $1 in
+    V)       _MODE__SELECT_=$__MODE_VERBOSE     ;;
+    v)       _MODE__SELECT_=$__MODE_VERBOSE     ;;
+    VERBOSE) _MODE__SELECT_=$__MODE_VERBOSE     ;;
+    verbose) _MODE__SELECT_=$__MODE_VERBOSE     ;;
+    D)       _MODE__SELECT_=$__MODE_DEBUG__     ;;
+    d)       _MODE__SELECT_=$__MODE_DEBUG__     ;;
+    DEBUG)   _MODE__SELECT_=$__MODE_DEBUG__     ;;
+    debug)   _MODE__SELECT_=$__MODE_DEBUG__     ;;
+    *)       _MODE__SELECT_=$__MODE_RELEASE     ;;
+esac
+
+FILE_NAME=$0
+
+# ( yes "" | head -n $_MODE__SELECT_ | head -n-1  ; tail $FILE_NAME -n+$_MODE__SELECT_ ) | head -n 55
+
+( yes "" | head -n $_MODE__SELECT_ | head -n-1  ; tail $FILE_NAME -n+$_MODE__SELECT_ ) | dotnet /usr/share/dotnet/sdk/5.0.104/Roslyn/bincore/csc.dll -nologo -t:library \
   -r:'../BepInEx/core/BepInEx.dll' \
   -r:'../BepInEx/core/0Harmony.dll' \
   -r:'../DSPGAME_Data/Managed/System.dll' \
@@ -8,11 +42,16 @@ dotnet /usr/share/dotnet/sdk/5.0.201/Roslyn/bincore/csc.dll -t:library \
   -r:'../DSPGAME_Data/Managed/UnityEngine.CoreModule.dll' \
   -r:'../DSPGAME_Data/Managed/mscorlib.dll' \
   -r:'../DSPGAME_Data/Managed/Assembly-CSharp.dll' \
-  powerFull.cs \
-  -out:'../BepInEx/plugins/powerfull.dll' \
+  -out:'../BepInEx/plugins/'"${FILE_NAME%.*}".dll \
   -optimize \
-  -define:DEBUG # optional
- */
+  -
+exit
+
+#define VERBOSE
+#define DEBUG
+
+
+
 using System;
 using BepInEx;
 using BepInEx.Configuration;
@@ -20,7 +59,6 @@ using HarmonyLib;
 using UnityEngine;
 using System.Reflection;
 using System.Collections.Generic;
-
 
 namespace PowerFull
 {
@@ -38,10 +76,13 @@ namespace PowerFull
         public static bool enable1=true;
         public static bool enable2=true;
         public static bool enable3=true;
+        public static bool enable4=true;
+        public static bool game_data_import_need_patch=true;
         public static double mechaCorePowerGen = 18000.0;
         public static float logisticDroneSpeed = 8.0f;
         public static float logisticShipSailSpeed = 400.0f;
         public static float logisticShipWarpSpeed = 400000.0f;
+        public static double belt_speed_mul = 2.0;
 #if DEBUG
         public static Action<string> logger;
 #endif
@@ -51,29 +92,35 @@ namespace PowerFull
             logisticShipSailSpeed = Configs.freeMode.logisticShipSailSpeed;
             logisticShipWarpSpeed = Configs.freeMode.logisticShipWarpSpeed;
 
-            enable2 = Config.Bind<bool>("config", "enable_power_mul", false, "开启电力乘数patch").Value;
-            power_mul = Config.Bind<float>("config", "power_mul", 10.0f, "电力乘数").Value;
-
             enable1 = Config.Bind<bool>("config", "enable_tech_modding", false, "开启科技效果修改patch").Value;
             mecha_core_power_gen_mul = Config.Bind<double>("config", "mecha_core_power_gen_mul", 1000.0f, "机甲核心生成能量的速度乘数，会影响存档！").Value;
             logistic_drone_speed_mul = Config.Bind<float>("config", "logistic_drone_speed_mul", 10.0f, "行星内运输机速度乘数，会影响存档！").Value;
             logistic_ship_sail_speed_mul = Config.Bind<float>("config", "logistic_ship_sail_speed_mul", 3000.0f, "星际运输机速度乘数，会影响存档！").Value;
             logistic_ship_warp_speed_mul = Config.Bind<float>("config", "logistic_ship_warp_speed_mul", 5.0f, "星际运输机翘曲速度乘数，会影响存档！").Value;
             max_mining_cost = Config.Bind<float>("config", "max_mining_cost", 0.0f, "挖矿消耗矿物比例的最大值，可以设为0以阻止采矿机消耗矿物，会影响存档！").Value;
-            if (!enable1){/*此时注入仍然存在，但已经失活*/
-                mecha_core_power_gen_mul=1.0;
-                logistic_drone_speed_mul=1.0f;
-                logistic_ship_sail_speed_mul=1.0f;
-                logistic_ship_warp_speed_mul=1.0f;
-                max_mining_cost=1.0f;
-            }
+
+            enable2 = Config.Bind<bool>("config", "enable_power_mul", false, "开启电力乘数patch").Value;
+            power_mul = Config.Bind<float>("config", "power_mul", 10.0f, "电力乘数").Value;
+
             enable3 = Config.Bind<bool>("config", "enable_extra_sand_mul", false, "开启垃圾箱patch").Value;
             extra_sand_mul = Config.Bind<int>("config", "extra_sand_mul", 1, "垃圾箱中每物品转化为沙土的数量").Value;
+
+            enable4 = Config.Bind<bool>("config", "enable_extra_speed", false, "传送带加速").Value;
+            belt_speed_mul = Config.Bind<double>("config", "belt_speed_mul", 2.0, "传送带速度乘数，会影响新建传送带，新建传送带的速度不会因读档而重置").Value;
+
+            game_data_import_need_patch = enable1 || enable3 ;
             var harmony=new Harmony("Neutron3529.Powerful");
 #if DEBUG
             logger=Logger.LogInfo;
 #endif
-            if (true){// 采矿无消耗，必须打开，因为需要在这里初始化几个反射的委托
+            if (game_data_import_need_patch){// 采矿无消耗，必须打开，因为需要在这里初始化几个反射的委托
+                if (!enable1){//此时注入代码仍然存在，但强制失活，这里的更改只会在log中显示，无论这里如何修改这几个变量，只要不打开enable1，后续代码将不会生效
+                    mecha_core_power_gen_mul=1.0;
+                    logistic_drone_speed_mul=1.0f;
+                    logistic_ship_sail_speed_mul=1.0f;
+                    logistic_ship_warp_speed_mul=1.0f;
+                    max_mining_cost=1.0f;
+                }
                 var original = typeof(GameData).GetMethod("Import", AccessTools.all);
                 var postfix = typeof(GameDataImportPatch).GetMethod("Postfix");
                 harmony.Patch(original, null, new HarmonyMethod(postfix));
@@ -98,6 +145,15 @@ namespace PowerFull
                 harmony.Patch(original, new HarmonyMethod(prefix));
 #if DEBUG
                 logger("PowerFull-垃圾桶-加载完成");
+#endif
+            }
+            if (enable4){// 传送带速度乘数
+                //var original = typeof(PlanetFactory).GetMethod("CreateEntityLogicComponents", new [] { typeof(int),typeof(int), typeof(bool) });
+                //var postfix = typeof(PlanetFactoryCreateEntityLogicComponentsPatch).GetMethod("Postfix");
+                //harmony.Patch(original, null, new HarmonyMethod(postfix));
+                harmony.PatchAll(typeof(CargoTrafficNewBeltComponentPatch));
+#if DEBUG
+                logger("PowerFull-传送带速度乘数-加载完成");
 #endif
             }
 #if DEBUG
@@ -184,6 +240,18 @@ namespace PowerFull
                 } else {
                     return true;
                 }
+            }
+        }
+        [HarmonyPatch(typeof(CargoTraffic), "NewBeltComponent")]
+        class CargoTrafficNewBeltComponentPatch{
+            public static bool Prefix(int __result, PlanetFactory __instance, ref int speed){
+#if DEBUG
+#if VERBOSE
+                logger(string.Format("将传送带速度从{0:N5}，修改至{1:N5}", speed, (int)(((double)speed) * belt_speed_mul)));
+#endif
+#endif
+                speed=(int)(((double)speed) * belt_speed_mul);
+                return true;
             }
         }
         /*
