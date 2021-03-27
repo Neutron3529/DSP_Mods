@@ -14,9 +14,14 @@
 #   * in my computer (Manjaro XFCE), if such script do not work
 #   * in your computer, you could just try the instructions below :
 
-__MODE_VERBOSE=50 # may be modified, check it carefully.
-__MODE_DEBUG__=51
-__MODE_RELEASE=52
+if [ -z "$__DOTNET_CSC" ]; then
+    export __DOTNET_CSC="`find /usr/share/dotnet -name dotnet` `find /usr/share/dotnet -name csc.dll`"
+    echo '$'"__DOTNET_CSC not set yet, it is automatically set to '$__DOTNET_CSC'"
+    echo "This program will exit now, if the path is correct, you could execute $0 again, if not, set __DOTNET_CSC to the correct value."
+fi
+__MODE_VERBOSE=55 # may be modified, check it carefully.
+__MODE_DEBUG__=56
+__MODE_RELEASE=57
 
 case $1 in
     V)       _MODE__SELECT_=$__MODE_VERBOSE     ;;
