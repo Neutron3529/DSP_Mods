@@ -152,10 +152,13 @@ namespace PowerFull
 #endif
             }
             if (enable4){// 传送带速度乘数
-                //var original = typeof(PlanetFactory).GetMethod("CreateEntityLogicComponents", new [] { typeof(int),typeof(int), typeof(bool) });
-                //var postfix = typeof(PlanetFactoryCreateEntityLogicComponentsPatch).GetMethod("Postfix");
-                //harmony.Patch(original, null, new HarmonyMethod(postfix));
+                //var original = typeof(CargoTraffic).GetMethod("UpgradeBeltComponent", AccessTools.all);
+                //var original2 = typeof(CargoTraffic).GetMethod("NewBeltComponent", AccessTools.all);
+                //var prefix = typeof(CargoTrafficNewBeltComponentPatch).GetMethod("Prefix");
+                //harmony.Patch(original, new HarmonyMethod(prefix));
+                //harmony.Patch(original2, new HarmonyMethod(prefix));
                 harmony.PatchAll(typeof(CargoTrafficNewBeltComponentPatch));
+                harmony.PatchAll(typeof(CargoTrafficUpgradeBeltComponentPatch));
 #if DEBUG
                 logger("PowerFull-传送带速度乘数-加载完成");
 #endif
@@ -259,7 +262,19 @@ namespace PowerFull
         }
         [HarmonyPatch(typeof(CargoTraffic), "NewBeltComponent")]
         class CargoTrafficNewBeltComponentPatch{
-            public static bool Prefix(int __result, PlanetFactory __instance, ref int speed){
+            public static bool Prefix(ref int speed){
+#if DEBUG
+#if VERBOSE
+                logger(string.Format("将传送带速度从{0:N5}，修改至{1:N5}", speed, (int)(((double)speed) * belt_speed_mul)));
+#endif
+#endif
+                speed=(int)(((double)speed) * belt_speed_mul);
+                return true;
+            }
+        }
+        [HarmonyPatch(typeof(CargoTraffic), "UpgradeBeltComponent")]
+        class CargoTrafficUpgradeBeltComponentPatch{
+            public static bool Prefix(ref int speed){
 #if DEBUG
 #if VERBOSE
                 logger(string.Format("将传送带速度从{0:N5}，修改至{1:N5}", speed, (int)(((double)speed) * belt_speed_mul)));
