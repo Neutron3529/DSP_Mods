@@ -15,13 +15,14 @@
 #   * in your computer, you could just try the instructions below :
 
 if [ -z "$__DOTNET_CSC" ]; then
-    export __DOTNET_CSC="`find /usr/share/dotnet -name dotnet` `find /usr/share/dotnet -name csc.dll`"
-    echo '$'"__DOTNET_CSC not set yet, it is automatically set to '$__DOTNET_CSC'"
-    echo "This program will exit now, if the path is correct, you could execute $0 again, if not, set __DOTNET_CSC to the correct value."
+    export __DOTNET_CSC="`find /usr/share/dotnet -type f -name dotnet` `find /usr/share/dotnet -name csc.dll`"
+    echo '$'"__DOTNET_CSC not set yet, you should execute" 
+    echo "export __DOTNET_CSC='$__DOTNET_CSC'"
+    echo "manually, or this alert will occur each time you execute this script."
 fi
-__MODE_VERBOSE=55 # may be modified, check it carefully.
-__MODE_DEBUG__=56
-__MODE_RELEASE=57
+__MODE_VERBOSE=56 # may be modified, check it carefully.
+__MODE_DEBUG__=57
+__MODE_RELEASE=58
 
 case $1 in
     V)       _MODE__SELECT_=$__MODE_VERBOSE     ;;
@@ -39,7 +40,7 @@ FILE_NAME=$0
 
 # ( yes "" | head -n $_MODE__SELECT_ | head -n-1  ; tail $FILE_NAME -n+$_MODE__SELECT_ ) | head -n 55
 
-( yes "" | head -n $_MODE__SELECT_ | head -n-1  ; tail $FILE_NAME -n+$_MODE__SELECT_ ) | dotnet /usr/share/dotnet/sdk/5.0.104/Roslyn/bincore/csc.dll -nologo -t:library \
+( yes "" | head -n $_MODE__SELECT_ | head -n-1  ; tail $FILE_NAME -n+$_MODE__SELECT_ ) | $__DOTNET_CSC -nologo -t:library \
   -r:'../BepInEx/core/BepInEx.dll' \
   -r:'../BepInEx/core/0Harmony.dll' \
   -r:'../DSPGAME_Data/Managed/System.dll' \
