@@ -64,6 +64,7 @@ using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Collections.Generic;
 
 namespace PowerFull
@@ -80,17 +81,22 @@ namespace PowerFull
         public static float mechaReplicatePower_add = 1.0f;
         public static Player player;//用于各种神奇操作
         public static Traverse sand_count;
-        public static bool enable1=true;
-        public static bool enable2=true;
-        public static bool enable3=true;
-        public static bool enable4=true;
-        public static bool game_data_import_need_patch=true;
+        public static bool enable1=false;
+        public static bool enable2=false;
+        public static bool enable3=false;
+        public static bool enable4=false;
+        public static bool enable5=false;
+        public static bool enable6=false;
+        public static bool game_data_import_need_patch=false;
         public static double mechaCorePowerGen = 18000.0;
         public static float logisticDroneSpeed = 8.0f;
         public static float logisticShipSailSpeed = 400.0f;
         public static float logisticShipWarpSpeed = 400000.0f;
         public static double belt_speed_mul = 2.0;
         public static double mechaReplicatePower=1.0;
+        public static int ArequireCounts=5;
+        public static int LrequireCounts=36000;
+        public static int Lspeed=3600;
 #if DEBUG
         public static Action<string> logger;
 #endif
@@ -117,6 +123,13 @@ namespace PowerFull
 
             enable4 = Config.Bind<bool>("config", "enable_extra_speed", false, "传送带加速").Value;
             belt_speed_mul = Config.Bind<double>("config", "belt_speed_mul", 2.0, "传送带速度乘数，会影响新建传送带，新建传送带的速度不会因读档而重置").Value;
+
+            enable5 = Config.Bind<bool>("config", "enable_ArequireCounts_mul", false, "自动化工厂需求数量").Value;
+            ArequireCounts = Config.Bind<int>("config", "arequireCounts", 5, "设置自动化工厂的爪子堆叠数量，默认为5，不影响存档").Value;
+
+            enable6 = Config.Bind<bool>("config", "enable_RrequireCounts_mul", false, "矩阵研究站需求数量").Value;
+            LrequireCounts = Config.Bind<int>("config", "lrequireCounts", 36000, "设置矩阵研究站的爪子堆叠数量，以3600为一个矩阵，需求矩阵的个数不必是整数，不影响存档").Value;
+            Lspeed = Config.Bind<int>("config", "lsp", 3600, "每次下层矩阵研究站向上层矩阵研究站传递矩阵块的数量，不建议高于lrequireCounts（因为游戏不会额外检查矩阵是否足够），建议改成lrequireCounts的一半或者3/4，不影响存档").Value;
 
             game_data_import_need_patch = enable1 || enable3 ;
             var harmony=new Harmony("Neutron3529.Powerful");
@@ -157,16 +170,24 @@ namespace PowerFull
                 logger("PowerFull-垃圾桶-加载完成");
 #endif
             }
-            if (enable4){// 传送带速度乘数
-                //var original = typeof(CargoTraffic).GetMethod("UpgradeBeltComponent", AccessTools.all);
-                //var original2 = typeof(CargoTraffic).GetMethod("NewBeltComponent", AccessTools.all);
-                //var prefix = typeof(CargoTrafficNewBeltComponentPatch).GetMethod("Prefix");
-                //harmony.Patch(original, new HarmonyMethod(prefix));
-                //harmony.Patch(original2, new HarmonyMethod(prefix));
+            if (enable4){
                 harmony.PatchAll(typeof(CargoTrafficNewBeltComponentPatch));
                 harmony.PatchAll(typeof(CargoTrafficUpgradeBeltComponentPatch));
 #if DEBUG
                 logger("PowerFull-传送带速度乘数-加载完成");
+#endif
+            }
+            if (enable5){
+                harmony.PatchAll(typeof(AssemblerComponentUpdateNeedsPatch));
+#if DEBUG
+                logger("PowerFull-自动化工厂需求数量-加载完成");
+#endif
+            }
+            if (enable6){
+                harmony.PatchAll(typeof(LabComponentUpdateNeedsResearchPatch));
+                harmony.PatchAll(typeof(LabComponentUpdateOutputToNextPatch));
+#if DEBUG
+                logger("PowerFull-矩阵研究站需求数量-加载完成");
 #endif
             }
 #if DEBUG
@@ -290,32 +311,46 @@ namespace PowerFull
                 return true;
             }
         }
-        /*
-        [HarmonyPatch(typeof(Player), "sandCount", MethodType.Getter)]
-        class PlayersandCountPatch{ // 来自https://github.com/dsp-mod/Trash/blob/main/Trash.cs的垃圾箱，省略掉了弹出提示的步骤，或有加速。
-            public static void Postfix(Player __instance, ref int __result){
-                __result += extra_sand_count;
-                if (__result > 1000000000){
-                    __result = 1000000000;
+        [HarmonyPatch(typeof(AssemblerComponent), "UpdateNeeds")]
+        class AssemblerComponentUpdateNeedsPatch{
+            public static bool Prefix(AssemblerComponent __instance) {
+                int i=0;
+                int l=__instance.requires.Length;
+                for(;i<l;i++)
+                    __instance.needs[i] = (( __instance.served[i] >= __instance.requireCounts[i] * ArequireCounts) ? 0 : __instance.requires[i]);
+                for(;i!=6;i++)
+                    __instance.needs[i] = 0;
+                return false;
+            }
+        }
+        [HarmonyPatch(typeof(LabComponent), "UpdateNeedsResearch")]
+        class LabComponentUpdateNeedsResearchPatch{
+            public static bool Prefix(LabComponent __instance) {
+                for(int i=0;i<6;i++)
+                    __instance.needs[i] = (( __instance.matrixServed[i] >= LrequireCounts) ? 0 : 6000+i);
+                return false;
+            }
+        }
+        [HarmonyPatch(typeof(LabComponent), "UpdateOutputToNext")]
+        public static class LabComponentUpdateOutputToNextPatch
+        {
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                int counter=0;
+                var codes = new List<CodeInstruction>(instructions);
+                foreach (var instruction in instructions)
+                {
+                    if (instruction.opcode == OpCodes.Ldc_I4 && (int)(instruction.operand) == 3600)
+                    {
+                        counter+=1;
+                        instruction.operand = Lspeed;
+                    }
+                    yield return instruction;
                 }
-//                __instance.set_sandCount(__result);
 #if DEBUG
-                logger(string.Format("触发沙土getter，应满足{0}>{1}或不等式两边均为0",extra_sand_count, __result - __instance.sandCount));
+                logger(string.Format("将每次传送白糖速度从{0:N5}，修改至{1:N5}，共修改了{2:N5}处IL代码", 3600, Lspeed, counter));
 #endif
             }
         }
-        [HarmonyPatch(typeof(Player), "sandCount", MethodType.Setter)]
-        class PlayersandCountPatch{ // 来自https://github.com/dsp-mod/Trash/blob/main/Trash.cs的垃圾箱，省略掉了弹出提示的步骤，或有加速。
-            public static void Prefix(Player __instance, ref int __result){
-                __result += extra_sand_count;
-                if (__result > 1000000000){
-                    __result = 1000000000;
-                }
-//                __instance.set_sandCount(__result);
-#if DEBUG
-                logger(string.Format("触发沙土getter，应满足{0}>{1}或不等式两边均为0",extra_sand_count, __result - __instance.sandCount));
-#endif
-            }
-        }*/
     }
 }
