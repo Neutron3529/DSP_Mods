@@ -327,7 +327,7 @@ namespace PowerFull
         class LabComponentUpdateNeedsResearchPatch{
             public static bool Prefix(LabComponent __instance) {
                 for(int i=0;i<6;i++)
-                    __instance.needs[i] = (( __instance.matrixServed[i] >= LrequireCounts) ? 0 : 6000+i);
+                    __instance.needs[i] = (( __instance.matrixServed[i] >= LrequireCounts) ? 0 : 6001+i);
                 return false;
             }
         }
