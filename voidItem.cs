@@ -89,6 +89,11 @@ namespace VoidItem
 #if DEBUG
             logger=Logger.LogInfo;
             logger("VoidItem加载完成");
+#if VERBOSE
+            //这是一个关于随机数的测试，因为我发现mono自带的System.Random生成的随机数跟我从游戏里复制的随机数函数不一样
+            System.Random random = new System.Random(123);
+            for(int i=0;i<100;i++)logger(String.Format("{0}",random.Next()));
+#endif
 #endif
         }
 
