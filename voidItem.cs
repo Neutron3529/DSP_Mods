@@ -93,6 +93,9 @@ namespace VoidItem
             //这是一个关于随机数的测试，因为我发现mono自带的System.Random生成的随机数跟我从游戏里复制的随机数函数不一样
             System.Random random = new System.Random(123);
             for(int i=0;i<100;i++)logger(String.Format("{0}",random.Next()));
+            //测试log的第一行是[Info   :  VoidItem] 1774931281
+            //最后一行是[Info   :  VoidItem] 2060550224
+            //这与Rust程序给出的结果一致
 #endif
 #endif
         }
