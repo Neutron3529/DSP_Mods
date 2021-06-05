@@ -76,8 +76,8 @@ namespace VoidItem
 #endif
         void Start() {
             var harmony=new Harmony("Neutron3529.VoidItem");
-            //harmony.PatchAll(typeof(StorageComponentTakeTailItemsPatch));
-            var m=typeof(StorageComponent).GetMethods();
+            harmony.PatchAll(typeof(StorageComponentTakeTailItemsPatch));
+            /*var m=typeof(StorageComponent).GetMethods();
             MethodInfo method_to_patch=m[0];
             foreach(var i in m)if(i.Name=="TakeTailItems" && i.ReturnType==typeof(void)){
                 method_to_patch=i;
@@ -85,7 +85,7 @@ namespace VoidItem
             }
             if(method_to_patch.Name!="TakeTailItems" || method_to_patch.ReturnType!=typeof(void)){return;}
             var prefix = typeof(StorageComponentTakeTailItemsPatch).GetMethod("Prefix");
-            harmony.Patch(method_to_patch, new HarmonyMethod(prefix));
+            harmony.Patch(method_to_patch, new HarmonyMethod(prefix));*/
 #if DEBUG
             logger=Logger.LogInfo;
             logger("VoidItem加载完成");
@@ -101,11 +101,11 @@ namespace VoidItem
         }
 
         //[HarmonyPatch(typeof(StorageComponent), "TakeTailItems",new Type[]{typeof(int) ,ref typeof(int),typeof(bool)})]
+	[HarmonyPatch(typeof(StorageComponent), "TakeTailItems",new Type[]{typeof(int) ,typeof(int),typeof(bool)},new ArgumentType[]{ArgumentType.Ref,ArgumentType.Ref,ArgumentType.Normal})]
         class StorageComponentTakeTailItemsPatch{
             public static bool Prefix(int count, int itemId) {
                 return count==0 || itemId==0;
             }
         }
-
     }
 }
