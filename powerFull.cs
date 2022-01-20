@@ -16,13 +16,14 @@
 
 if [ -z "$__DOTNET_CSC" ]; then
     export __DOTNET_CSC="`find /usr/share/dotnet -type f -name dotnet` `find /usr/share/dotnet -name csc.dll`"
-    echo '$'"__DOTNET_CSC not set yet, you should execute" 
+    echo '$'"__DOTNET_CSC not set yet, you should execute"
     echo "export __DOTNET_CSC='$__DOTNET_CSC'"
     echo "manually, or this alert will occur each time you execute this script."
 fi
-__MODE_VERBOSE=56 # may be modified, check it carefully.
-__MODE_DEBUG__=57
-__MODE_RELEASE=58
+
+__MODE_VERBOSE=75 # is the line number of "#define VERBOSE", may be modified
+__MODE_DEBUG__=$((__MODE_VERBOSE+1))
+__MODE_RELEASE=$((__MODE_DEBUG__+1))
 
 case $1 in
     V)       _MODE__SELECT_=$__MODE_VERBOSE     ;;
@@ -36,42 +37,62 @@ case $1 in
     *)       _MODE__SELECT_=$__MODE_RELEASE     ;;
 esac
 
-FILE_NAME=$0
-
-# ( yes "" | head -n $_MODE__SELECT_ | head -n-1  ; tail $FILE_NAME -n+$_MODE__SELECT_ ) | head -n 55
+export GAME_NAME="DSPGAME"
+export FILE_NAME="$0"
 
 ( yes "" | head -n $_MODE__SELECT_ | head -n-1  ; tail $FILE_NAME -n+$_MODE__SELECT_ ) | $__DOTNET_CSC -nologo -t:library \
   -r:'../BepInEx/core/BepInEx.dll' \
   -r:'../BepInEx/core/0Harmony.dll' \
-  -r:'../DSPGAME_Data/Managed/System.dll' \
-  -r:'../DSPGAME_Data/Managed/UnityEngine.dll' \
-  -r:'../DSPGAME_Data/Managed/UnityEngine.CoreModule.dll' \
-  -r:'../DSPGAME_Data/Managed/mscorlib.dll' \
-  -r:'../DSPGAME_Data/Managed/Assembly-CSharp.dll' \
+  -r:'../BepInEx/core/BepInEx.Harmony.dll' \
+  -r:"../${GAME_NAME}_Data/Managed/System.dll" \
+  -r:"../${GAME_NAME}_Data/Managed/System.Core.dll" \
+  -r:"../${GAME_NAME}_Data/Managed/UnityEngine.dll" \
+  -r:"../${GAME_NAME}_Data/Managed/UnityEngine.CoreModule.dll" \
+  -r:"../${GAME_NAME}_Data/Managed/mscorlib.dll" \
+  -r:"../${GAME_NAME}_Data/Managed/Assembly-CSharp.dll" \
+  `[ -e "../${GAME_NAME}_Data/Managed/Assembly-CSharp-firstpass.dll" ] && echo "-r:\"../${GAME_NAME}_Data/Managed/Assembly-CSharp-firstpass.dll\""` \
   -out:'../BepInEx/plugins/'"${FILE_NAME%.*}".dll \
   -optimize \
-  -
+  - && ( rm "../BepInEx/config/Neutron3529.Cheat.cfg" 2>/dev/null )
+
+if [ -n "$2" ]; then
+    git add ${FILE_NAME}
+    case $2 in
+        R) git commit -am "`curl -s http://whatthecommit.com/index.txt`" ;;
+        r) git commit -am "`curl -s http://whatthecommit.com/index.txt`" ;;
+        RANDOM) git commit -am "`curl -s http://whatthecommit.com/index.txt`" ;;
+        random) git commit -am "`curl -s http://whatthecommit.com/index.txt`" ;;
+        U) git commit -am "`curl -s http://whatthecommit.com/index.txt`" ;;
+        u) git commit -am "`curl -s http://whatthecommit.com/index.txt`" ;;
+        UPLOAD) git commit -am "`curl -s http://whatthecommit.com/index.txt`" ;;
+        upload) git commit -am "`curl -s http://whatthecommit.com/index.txt`" ;;
+        *) git commit -am "$2" ;;
+    esac
+    git push
+fi
 exit
 
-#define VERBOSE
+#define VERBOSE // the line of __MODE_VERBOSE
 #define DEBUG
 
 
 
 using System;
-using BepInEx;
-using BepInEx.Configuration;
-using HarmonyLib;
-using UnityEngine;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Collections.Generic;
 
+using BepInEx;
+using BepInEx.Configuration;
+using HarmonyLib;
+using UnityEngine;
+
 namespace PowerFull
 {
-    [BepInPlugin("Neutron3529.PowerFull", "PowerFull", "0.1.1")]
+    [BepInPlugin("Neutron3529.Cheat", "PowerFull", "0.2.0")]
     public class PowerFull : BaseUnityPlugin {
-        public static float power_mul=10.0f;
+        public static float power_mul=10.0f;/*
         public static double mecha_core_power_gen_mul = 1.0;
         public static float logistic_drone_speed_mul = 1.0f;
         public static float logistic_ship_sail_speed_mul = 1.0f;
@@ -96,11 +117,34 @@ namespace PowerFull
         public static double mechaReplicatePower=1.0;
         public static int ArequireCounts=5;
         public static int LrequireCounts=36000;
-        public static int Lspeed=3600;
+        public static int Lspeed=3600;*/
 #if DEBUG
         public static Action<string> logger;
 #endif
         void Start() {
+            var harmony=new Harmony("Neutron3529.Powerful");
+#if DEBUG
+            logger=Logger.LogInfo;
+#endif
+            if ((power_mul = Config.Bind<float>("config", "power_mul", 180.0f, "电力乘数，大于0时开启").Value)>0f){
+                var original = typeof(PowerSystem).GetMethod("GameTick", AccessTools.all);
+                var postfix = typeof(PowerSystemGameTickPatch).GetMethod("Postfix");
+                harmony.Patch(original, null, new HarmonyMethod(postfix));
+#if DEBUG
+                logger("PowerFull-电力x10-加载完成");
+#endif
+            }
+            if ((Config.Bind<bool>("config", "mining_no_cost", true, "挖矿不消耗资源，且星际站点挖矿加速").Value)){
+                harmony.PatchAll(typeof(PlanetTransportGameTick));
+                harmony.PatchAll(typeof(FactorySystemGameTick));
+#if DEBUG
+                logger("PowerFull-采矿修改-加载完成");
+#endif
+            }
+#if DEBUG
+            logger("PowerFull-加载完成");
+#endif
+            /*
             mechaCorePowerGen = Configs.freeMode.mechaCorePowerGen;
             logisticDroneSpeed = Configs.freeMode.logisticDroneSpeed;
             logisticShipSailSpeed = Configs.freeMode.logisticShipSailSpeed;
@@ -189,11 +233,67 @@ namespace PowerFull
 #if DEBUG
                 logger("PowerFull-矩阵研究站需求数量-加载完成");
 #endif
-            }
+            }*/
 #if DEBUG
             logger("PowerFull加载完成");
 #endif
         }
+        [HarmonyPatch(typeof(PowerSystem), "GameTick")]
+        class PowerSystemGameTickPatch {
+            public static void Postfix(PowerSystem __instance) {
+                for(int i=__instance.networkServes.Length-1;i>=0;i--) {
+                    __instance.networkServes[i]*=power_mul;
+                }
+            }
+        }
+        [HarmonyPatch(typeof(PlanetTransport), "GameTick")] // https://github.com/BepInEx/HarmonyX/wiki/Transpiler-helpers
+        public static class PlanetTransportGameTick
+        {
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                int counter=0;
+                var codes = new List<CodeInstruction>(instructions);
+                foreach (var instruction in instructions)
+                {
+                    yield return instruction;
+                    if (instruction.opcode == OpCodes.Ldfld && ((FieldInfo)instruction.operand).Name == "miningSpeedScale" )
+                    {
+                        counter+=1;
+                        yield return new CodeInstruction(OpCodes.Ldc_R4,10f);
+                        yield return new CodeInstruction(OpCodes.Mul);
+                    }
+                }
+#if DEBUG
+                logger(string.Format("将对miningSpeedScale的读取pop掉之后填0，共修改了{0:N5}处IL代码", counter));
+#endif
+                yield break;
+            }
+        }
+
+        [HarmonyPatch(typeof(FactorySystem), "GameTick", new Type[]{ typeof(long), typeof(bool) })]
+        [HarmonyPatch(typeof(FactorySystem), "GameTick", new Type[]{ typeof(long), typeof(bool), typeof(int), typeof(int), typeof(int) })]
+        public static class FactorySystemGameTick// used for 2  FactorySystem functions.
+        {
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                int counter=0;
+                var codes = new List<CodeInstruction>(instructions);
+                foreach (var instruction in instructions)
+                {
+                    yield return instruction;
+                    if (instruction.opcode == OpCodes.Ldfld && ((FieldInfo)instruction.operand).Name == "miningCostRate" )
+                    {
+                        counter+=1;
+                        yield return new CodeInstruction(OpCodes.Pop);
+                        yield return new CodeInstruction(OpCodes.Ldc_R4,0f);
+                    }
+                }
+#if DEBUG
+                logger(string.Format("将对miningCostRate的读取pop掉之后填0，共修改了{0:N5}处IL代码", counter));
+#endif
+                yield break;
+            }
+        }/*
         [HarmonyPatch(typeof(GameData), "Import")]
         class GameDataImportPatch{
             public static void Postfix(GameData __instance){
@@ -259,14 +359,6 @@ namespace PowerFull
                 }else{
                     logger(string.Format("mecha.replicatePower的原始值为{0:N5}，新值为{1:N5}，未触发修改，保持mecha.replicateSpeed的原始值{2:N5}不变", player.mecha.replicatePower,mechaReplicatePower+(double)mechaReplicatePower_add, player.mecha.replicateSpeed));
 #endif
-                }
-            }
-        }
-        [HarmonyPatch(typeof(PowerSystem), "GameTick")]
-        class PowerSystemGameTickPatch {
-            public static void Postfix(PowerSystem __instance) {
-                for(int i=__instance.networkServes.Length-1;i>=0;i--) {
-                    __instance.networkServes[i]*=power_mul;
                 }
             }
         }
@@ -351,6 +443,6 @@ namespace PowerFull
                 logger(string.Format("将每次传送白糖速度从{0:N5}，修改至{1:N5}，共修改了{2:N5}处IL代码", 3600, Lspeed, counter));
 #endif
             }
-        }
+        }*/
     }
 }
