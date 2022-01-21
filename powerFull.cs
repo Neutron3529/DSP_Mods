@@ -44,6 +44,7 @@ export FILE_NAME="$0"
   -r:'../BepInEx/core/BepInEx.dll' \
   -r:'../BepInEx/core/0Harmony.dll' \
   -r:'../BepInEx/core/BepInEx.Harmony.dll' \
+  -r:"../${GAME_NAME}_Data/Managed/netstandard.dll" \
   -r:"../${GAME_NAME}_Data/Managed/System.dll" \
   -r:"../${GAME_NAME}_Data/Managed/System.Core.dll" \
   -r:"../${GAME_NAME}_Data/Managed/UnityEngine.dll" \
