@@ -130,6 +130,7 @@ namespace PowerFull
                 var original = typeof(PowerSystem).GetMethod("GameTick", AccessTools.all);
                 var postfix = typeof(PowerSystemGameTickPatch).GetMethod("Postfix");
                 harmony.Patch(original, null, new HarmonyMethod(postfix));
+                harmony.PatchAll(typeof(LabComponentInternalUpdateResearch_Fix)); // fix: 实验室可以正确应用增产剂而不触发异常检测。
 #if DEBUG
                 logger("PowerFull-电力x10-加载完成");
 #endif
@@ -237,6 +238,13 @@ namespace PowerFull
 #if DEBUG
             logger("PowerFull加载完成");
 #endif
+        }
+        [HarmonyPatch(typeof(LabComponent), "InternalUpdateResearch")]
+        class LabComponentInternalUpdateResearch_Fix {
+            public static bool Prefix(ref float power,float speed) {
+                power= (float)((int)(speed + 2f))/speed;
+                return true
+            }
         }
         [HarmonyPatch(typeof(PowerSystem), "GameTick")]
         class PowerSystemGameTickPatch {
