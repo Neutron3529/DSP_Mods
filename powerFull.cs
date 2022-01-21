@@ -242,8 +242,8 @@ namespace PowerFull
         [HarmonyPatch(typeof(LabComponent), "InternalUpdateResearch")]
         class LabComponentInternalUpdateResearch_Fix {
             public static bool Prefix(ref float power,float speed) {
-                power= (float)((int)(speed + 2f))/speed;
-                return true
+                power = (float)((int)(speed + 2f))/speed;
+                return true;
             }
         }
         [HarmonyPatch(typeof(PowerSystem), "GameTick")]
