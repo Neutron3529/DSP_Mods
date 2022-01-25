@@ -139,7 +139,7 @@ namespace PowerFull
         class PowerSystemGameTickPatch {
             public static void Postfix(PowerSystem __instance) {
                 for(int i=__instance.networkServes.Length-1;i>=0;i--) {
-                    __instance.networkServes[i]*=power_mul;
+                    __instance.networkServes[i]=power_mul;
                 }
             }
         }
@@ -179,24 +179,29 @@ namespace PowerFull
         }
         [HarmonyPatch(typeof(MechaForge), "GameTick")]
         public static class MechaForgeGameTick {
-            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
-                return new CodeMatcher(instructions)
-                    /*
-                    .MatchForward(false, // false = move at the start of the match, true = move at the end of the match
-                        new CodeMatch(OpCodes.Stfld, AccessTools.Field(typeof(ForgeTask),"tick"))
-                    ).Repeat( matcher => matcher// Do the following for each match
-                        .InsertAndAdvance(
-                            new CodeInstruction(OpCodes.Pop),
-                            new CodeInstruction(OpCodes.Dup),
-                            new CodeInstruction(OpCodes.Ldfld,AccessTools.Field(typeof(ForgeTask),"tickSpend"))
-                        )
-                    ).InstructionEnumeration();*/
-                    .MatchForward(false,
-                        new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(ForgeTask),"tickSpend"))
-                    ).Repeat( matcher => matcher
-                        .SetOperandAndAdvance(AccessTools.Field(typeof(ForgeTask),"tick"))
-                    ).InstructionEnumeration();
+            public static void Prefix(ref MechaForge __instance) {
+                if (__instance.tasks.Count > 0) {
+                    __instance.tasks[0].tick=__instance.tasks[0].tickSpend;
+                }
             }
+//             static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+//                 return new CodeMatcher(instructions)
+//                     /*
+//                     .MatchForward(false, // false = move at the start of the match, true = move at the end of the match
+//                         new CodeMatch(OpCodes.Stfld, AccessTools.Field(typeof(ForgeTask),"tick"))
+//                     ).Repeat( matcher => matcher// Do the following for each match
+//                         .InsertAndAdvance(
+//                             new CodeInstruction(OpCodes.Pop),
+//                             new CodeInstruction(OpCodes.Dup),
+//                             new CodeInstruction(OpCodes.Ldfld,AccessTools.Field(typeof(ForgeTask),"tickSpend"))
+//                         )
+//                     ).InstructionEnumeration();*/
+//                     .MatchForward(false,
+//                         new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(ForgeTask),"tickSpend"))
+//                     ).Repeat( matcher => matcher
+//                         .SetOperandAndAdvance(AccessTools.Field(typeof(ForgeTask),"tick"))
+//                     ).InstructionEnumeration();
+//             }
         }
     }
 }
