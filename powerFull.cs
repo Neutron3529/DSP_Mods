@@ -124,6 +124,20 @@ namespace PowerFull
                 logger("PowerFull-机甲瞬间合成-加载完成");
 #endif
             }
+            if ((Config.Bind<bool>("config", "free_sail", true, "机甲自由曲速").Value)){
+                harmony.PatchAll(typeof(PlayerMove_SailGameTick));
+                harmony.PatchAll(typeof(MechaUseWarper));
+                harmony.PatchAll(typeof(PlayerMove_SailUseWarpEnergy));
+#if DEBUG
+                logger("PowerFull-机甲自由曲速-加载完成");
+#endif
+            }
+            if ((Config.Bind<bool>("config", "after_finished_the_game", true, "开启二周目矩阵支援，在研究电磁学技术之后，获得成吨的矩阵，适量的解锁物品，几个矩阵实验室，和物流站").Value)){
+                harmony.PatchAll(typeof(GameHistoryDataGainTechAwards));
+#if DEBUG
+                logger("PowerFull-二周目矩阵支援-加载完成");
+#endif
+            }
 #if DEBUG
             logger("PowerFull-加载完成");
 #endif
@@ -202,6 +216,67 @@ namespace PowerFull
 //                         .SetOperandAndAdvance(AccessTools.Field(typeof(ForgeTask),"tick"))
 //                     ).InstructionEnumeration();
 //             }
+        }
+        [HarmonyPatch(typeof(PlayerMove_Sail), "GameTick")]
+        public static class PlayerMove_SailGameTick {
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+                return new CodeMatcher(instructions)
+                    .MatchForward(false, // false = move at the start of the match, true = move at the end of the match
+                        new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(Mecha),"thrusterLevel")),
+                        new CodeMatch(OpCodes.Ldc_I4_3),
+                        new CodeMatch(i => i.opcode == OpCodes.Blt)
+                    ).Advance(
+                        1
+                    ).SetOpcodeAndAdvance(
+                        OpCodes.Ldc_I4_0
+                    ).InstructionEnumeration();
+            }
+        }
+        [HarmonyPatch(typeof(Mecha), "UseWarper")]
+        class MechaUseWarper {
+            public static bool Prefix(ref bool __result) {
+                __result=true;
+                return false;
+            }
+        }
+        [HarmonyPatch(typeof(PlayerMove_Sail), "UseWarpEnergy")]
+        class PlayerMove_SailUseWarpEnergy {
+            public static bool Prefix(ref bool __result) {
+                __result=true;
+                return false;
+            }
+        }
+        [HarmonyPatch(typeof(GameHistoryData), "GainTechAwards")]
+        class GameHistoryDataGainTechAwards {
+            public static void Postfix(int itemId) {
+                if(itemId==2301){
+                    GameMain.mainPlayer.TryAddItemToPackage(1202, 30+150-10, 0, true, 0);//磁线圈，升级用，有10个多余（因为我们已经支付了这一项科技的成本）
+                    GameMain.mainPlayer.TryAddItemToPackage(1301, 40+220, 0, true, 0);//电路板，升级用
+                    GameMain.mainPlayer.TryAddItemToPackage(1201, 20+  0, 0, true, 0);//  齿轮，升级用
+                    GameMain.mainPlayer.TryAddItemToPackage(1101,  0+ 20, 0, true, 0);//  铁块，升级用
+                    GameMain.mainPlayer.TryAddItemToPackage(1104,  0+ 20, 0, true, 0);//  铜块，升级用
+                    GameMain.mainPlayer.TryAddItemToPackage(1203,  0+ 60, 0, true, 0);//电动机，升级用
+                    GameMain.mainPlayer.TryAddItemToPackage(1006,  0+210, 0, true, 0);//  煤矿，升级用
+                    GameMain.mainPlayer.TryAddItemToPackage(1103,  0+120, 0, true, 0);//  钢材，升级用
+                    GameMain.mainPlayer.TryAddItemToPackage(1030,  0+ 60, 0, true, 0);//  木材，升级用
+                    GameMain.mainPlayer.TryAddItemToPackage(1109,  0+ 60, 0, true, 0);//高能石墨升级用
+                    GameMain.mainPlayer.TryAddItemToPackage(2901,  49, 0, true, 0);//矩阵研究站，49个
+                    GameMain.mainPlayer.TryAddItemToPackage(2104,  10, 0, true, 0);//物流站，10个
+                    GameMain.mainPlayer.TryAddItemToPackage(5002, 100, 0, true, 0);//大飞机，100个
+                    GameMain.mainPlayer.TryAddItemToPackage(2003, 300, 0, true, 0);//蓝带，300个
+//                     GameMain.mainPlayer.TryAddItemToPackage(2001,   1, 0, true, 0);//黄带，1个，用于治疗强迫症
+                    GameMain.mainPlayer.TryAddItemToPackage(6001,1000, 0, true, 0);
+                    GameMain.mainPlayer.TryAddItemToPackage(6002,1000, 0, true, 0);
+                    GameMain.mainPlayer.TryAddItemToPackage(6003,1000, 0, true, 0);
+                    GameMain.mainPlayer.TryAddItemToPackage(6004,1000, 0, true, 0);
+                    GameMain.mainPlayer.TryAddItemToPackage(6005,1000, 0, true, 0);
+                    GameMain.mainPlayer.TryAddItemToPackage(6001,50000, 0, true, 0);
+                    GameMain.mainPlayer.TryAddItemToPackage(6002,50000, 0, true, 0);
+                    GameMain.mainPlayer.TryAddItemToPackage(6003,50000, 0, true, 0);
+                    GameMain.mainPlayer.TryAddItemToPackage(6004,40000, 0, true, 0);
+                    GameMain.mainPlayer.TryAddItemToPackage(6005,40000, 0, true, 0);
+                }
+            }
         }
     }
 }
