@@ -269,22 +269,48 @@ namespace PowerFull
         }
         [HarmonyPatch(typeof(GameHistoryData), "GainTechAwards")]
         class GameHistoryDataGainTechAwards {
+            static PlanetFactory nearestFactory;
+            static Mecha mecha;
+            static int randSeed=0;
             public static void AddItems(int id,int count){
-                GameMain.mainPlayer.TryAddItemToPackage(id,count, 0, true, 0);
+                mecha.AddProductionStat(id,count,nearestFactory);
+                GameMain.mainPlayer.TryAddItemToPackage(id,count, count*4, true, 0);
                 UIItemup.Up(id, count);
             }
-            public static void AddStats(ref Mecha mecha, PlanetFactory nearestFactory,int id,int count){
+            public static void AddStats(int id,int count){
                 mecha.AddProductionStat(id,count,nearestFactory);
                 mecha.AddConsumptionStat(id,count,nearestFactory);
             }
+            public static void AddTrashes(int id,int quantity,int count){
+                mecha.AddProductionStat(id,count*quantity,nearestFactory);
+                VectorLF3 vectorLF = Maths.QRotateLF(GameMain.mainPlayer.uRotation, new VectorLF3(0f, 1f, 0f));
+                int nearStarId = (GameMain.data.localStar != null) ? (GameMain.data.localStar.id * 100) : 0;
+                double nearStarGravity = (GameMain.data.localStar != null) ? GameMain.data.trashSystem.GetStarGravity(GameMain.data.localStar.id) : 0.0;
+                for(int i=0;i<count;i++){
+                    TrashObject trashObj = new TrashObject(id, quantity, quantity*4, Vector3.zero, Quaternion.identity);
+                    TrashData trashData = default(TrashData);
+                    trashData.landPlanetId = 0;
+                    trashData.nearPlanetId = 0;
+                    trashData.nearStarId = nearStarId;
+                    trashData.nearStarGravity = nearStarGravity;
+                    trashData.lPos = Vector3.zero;
+                    trashData.lRot = Quaternion.identity;
+                    trashData.uPos = GameMain.mainPlayer.uPosition + RandomTable.SphericNormal(ref randSeed, 0.2);
+                    trashData.uRot = Quaternion.LookRotation(RandomTable.SphericNormal(ref randSeed, 1.0).normalized, vectorLF);
+                    trashData.uVel = GameMain.mainPlayer.uVelocity + RandomTable.SphericNormal(ref randSeed, 4.0) + vectorLF * 15.0;
+                    trashData.uAgl = RandomTable.SphericNormal(ref randSeed, 0.03);
+                    GameMain.data.trashSystem.container.NewTrash(trashObj, trashData);
+                }
+            }
             public static void Postfix(int itemId) {
                 if(itemId==2301){
-                    PlanetFactory nearestFactory = GameMain.mainPlayer.nearestFactory;
-                    Mecha mecha = GameMain.mainPlayer.mecha;
-                    GameHistoryDataGainTechAwards.AddStats(ref mecha,nearestFactory,1120,5000000);//氢
-                    GameHistoryDataGainTechAwards.AddStats(ref mecha,nearestFactory,1121,1000000);//重氢
-                    GameHistoryDataGainTechAwards.AddStats(ref mecha,nearestFactory,1126, 100000);//卡晶
-                    GameHistoryDataGainTechAwards.AddStats(ref mecha,nearestFactory,1304,  50000);//阴间过滤器
+                    randSeed=0;
+                    nearestFactory = GameMain.mainPlayer.nearestFactory;
+                    mecha = GameMain.mainPlayer.mecha;
+                    GameHistoryDataGainTechAwards.AddStats(1120,9000000);//氢
+                    GameHistoryDataGainTechAwards.AddStats(1121,2000000);//重氢
+                    GameHistoryDataGainTechAwards.AddStats(1126, 200000);//卡晶
+                    GameHistoryDataGainTechAwards.AddStats(1304, 200000);//阴间过滤器
                     GameHistoryDataGainTechAwards.AddItems(1202, 30+150-10);//磁线圈，升级用，有10个多余（因为我们已经支付了这一项科技的成本）
                     GameHistoryDataGainTechAwards.AddItems(1301, 40+220);//电路板，升级用
                     GameHistoryDataGainTechAwards.AddItems(1201, 20+  0);//  齿轮，升级用
@@ -295,21 +321,26 @@ namespace PowerFull
                     GameHistoryDataGainTechAwards.AddItems(1103,  0+120);//  钢材，升级用
                     GameHistoryDataGainTechAwards.AddItems(1030,  0+ 60);//  木材，升级用
                     GameHistoryDataGainTechAwards.AddItems(1109,  0+ 60);//高能石墨升级用
-                    GameHistoryDataGainTechAwards.AddItems(2901,  49);//矩阵研究站，49个
+
+                    GameHistoryDataGainTechAwards.AddItems(6001,400+1400);//初始升级用矩阵
+                    GameHistoryDataGainTechAwards.AddItems(6002,400+1400);
+                    GameHistoryDataGainTechAwards.AddItems(6003,300+1200);
+
                     GameHistoryDataGainTechAwards.AddItems(2104,  10);//物流站，10个
+                    GameHistoryDataGainTechAwards.AddItems(2316,  10);//大型采矿机，10个
                     GameHistoryDataGainTechAwards.AddItems(5002, 100);//大飞机，100个
                     GameHistoryDataGainTechAwards.AddItems(2003, 300);//蓝带，300个
-//                     GameHistoryDataGainTechAwards.AddItems(2001,   1);//黄带，1个，用于治疗强迫症
-                    GameHistoryDataGainTechAwards.AddItems(6001,1000);
-                    GameHistoryDataGainTechAwards.AddItems(6002,1000);
-                    GameHistoryDataGainTechAwards.AddItems(6003,1000);
-                    GameHistoryDataGainTechAwards.AddItems(6004,1000);
-                    GameHistoryDataGainTechAwards.AddItems(6005,1000);
-                    GameHistoryDataGainTechAwards.AddItems(6001,50000);
-                    GameHistoryDataGainTechAwards.AddItems(6002,50000);
-                    GameHistoryDataGainTechAwards.AddItems(6003,50000);
-                    GameHistoryDataGainTechAwards.AddItems(6004,40000);
-                    GameHistoryDataGainTechAwards.AddItems(6005,40000);
+
+
+                    GameHistoryDataGainTechAwards.AddStats(1403,     60);//湮灭约束球
+                    GameHistoryDataGainTechAwards.AddItems(1803, 120);//燃料棒
+                    GameHistoryDataGainTechAwards.AddItems(2001,   1);//黄带，1个，用于治疗强迫症
+
+                    GameHistoryDataGainTechAwards.AddTrashes(6001,4000,50);
+                    GameHistoryDataGainTechAwards.AddTrashes(6002,4000,50);
+                    GameHistoryDataGainTechAwards.AddTrashes(6003,4000,50);
+                    GameHistoryDataGainTechAwards.AddTrashes(6004,4000,50);
+                    GameHistoryDataGainTechAwards.AddTrashes(6005,4000,50);
                 }
             }
         }
