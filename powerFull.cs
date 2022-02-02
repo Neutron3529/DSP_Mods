@@ -295,9 +295,9 @@ namespace PowerFull
                     trashData.nearStarGravity = nearStarGravity;
                     trashData.lPos = Vector3.zero;
                     trashData.lRot = Quaternion.identity;
-                    trashData.uPos = GameMain.mainPlayer.uPosition + RandomTable.SphericNormal(ref randSeed, 0.2);
+                    trashData.uPos = GameMain.mainPlayer.uPosition + RandomTable.SphericNormal(ref randSeed, 0.8);
                     trashData.uRot = Quaternion.LookRotation(RandomTable.SphericNormal(ref randSeed, 1.0).normalized, vectorLF);
-                    trashData.uVel = GameMain.mainPlayer.uVelocity + RandomTable.SphericNormal(ref randSeed, 4.0) + vectorLF * 15.0;
+                    trashData.uVel = GameMain.mainPlayer.uVelocity + RandomTable.SphericNormal(ref randSeed, 8.0) + vectorLF * 15.0;
                     trashData.uAgl = RandomTable.SphericNormal(ref randSeed, 0.03);
                     GameMain.data.trashSystem.container.NewTrash(trashObj, trashData);
                 }
