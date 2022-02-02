@@ -336,11 +336,11 @@ namespace PowerFull
                     GameHistoryDataGainTechAwards.AddItems(1803, 120);//燃料棒
                     GameHistoryDataGainTechAwards.AddItems(2001,   1);//黄带，1个，用于治疗强迫症
 
-                    GameHistoryDataGainTechAwards.AddTrashes(6001,4000,50);
-                    GameHistoryDataGainTechAwards.AddTrashes(6002,4000,50);
-                    GameHistoryDataGainTechAwards.AddTrashes(6003,4000,50);
-                    GameHistoryDataGainTechAwards.AddTrashes(6004,4000,50);
-                    GameHistoryDataGainTechAwards.AddTrashes(6005,4000,50);
+                    GameHistoryDataGainTechAwards.AddTrashes(6001,1000,156+1);
+                    GameHistoryDataGainTechAwards.AddTrashes(6002,1000,157+1);
+                    GameHistoryDataGainTechAwards.AddTrashes(6003,1000,124+1);
+                    GameHistoryDataGainTechAwards.AddTrashes(6004,1000,90+1);
+                    GameHistoryDataGainTechAwards.AddTrashes(6005,1000,((int)67.5)+1);
                 }
             }
         }
