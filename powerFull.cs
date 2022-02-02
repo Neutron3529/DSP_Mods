@@ -111,7 +111,7 @@ namespace PowerFull
                 logger("PowerFull-电力x10-加载完成");
 #endif
             }
-            if ((Config.Bind<bool>("config", "mining_no_cost", true, "挖矿不消耗资源，且星际站点挖矿加速").Value)){
+            if ((Config.Bind<bool>("config", "mining_no_cost", true, "挖矿不消耗资源，且星际站点挖矿加速（CodeMatcher）").Value)){
                 harmony.PatchAll(typeof(PlanetTransportGameTick));
                 harmony.PatchAll(typeof(FactorySystemGameTick));
 #if DEBUG
@@ -124,12 +124,18 @@ namespace PowerFull
                 logger("PowerFull-机甲瞬间合成-加载完成");
 #endif
             }
-            if ((Config.Bind<bool>("config", "free_sail", true, "机甲自由曲速").Value)){
+            if ((Config.Bind<bool>("config", "free_sail", true, "机甲自由曲速（CodeMatcher）").Value)){
                 harmony.PatchAll(typeof(PlayerMove_SailGameTick));
                 harmony.PatchAll(typeof(MechaUseWarper));
                 harmony.PatchAll(typeof(PlayerMove_SailUseWarpEnergy));
 #if DEBUG
                 logger("PowerFull-机甲自由曲速-加载完成");
+#endif
+            }
+            if ((Config.Bind<bool>("config", "MechaLabGameTick", true, "机甲研究室加速研究（CodeMatcher）").Value)){
+                harmony.PatchAll(typeof(MechaLabGameTick));
+#if DEBUG
+                logger("PowerFull-机甲研究室加速研究-加载完成");
 #endif
             }
             if ((Config.Bind<bool>("config", "after_finished_the_game", true, "开启二周目矩阵支援，在研究电磁学技术之后，获得成吨的矩阵，适量的解锁物品，几个矩阵实验室，和物流站").Value)){
@@ -246,35 +252,64 @@ namespace PowerFull
                 return false;
             }
         }
+        [HarmonyPatch(typeof(MechaLab), "GameTick")]
+        class MechaLabGameTick {
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
+                return new CodeMatcher(instructions)
+                    .MatchForward(false, // false = move at the start of the match, true = move at the end of the match
+                        new CodeMatch(OpCodes.Ldarg_0),
+                        new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(MechaLab),"gameHistory")),
+                        new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(GameHistoryData),"techSpeed"))
+                    ).Advance(1).SetAndAdvance(
+                        OpCodes.Pop,null
+                    ).SetAndAdvance(
+                        OpCodes.Ldc_I4,14400
+                    ).InstructionEnumeration();
+            }
+        }
         [HarmonyPatch(typeof(GameHistoryData), "GainTechAwards")]
         class GameHistoryDataGainTechAwards {
+            public static void AddItems(int id,int count){
+                GameMain.mainPlayer.TryAddItemToPackage(id,count, 0, true, 0);
+                UIItemup.Up(id, count);
+            }
+            public static void AddStats(ref Mecha mecha, PlanetFactory nearestFactory,int id,int count){
+                mecha.AddProductionStat(id,count,nearestFactory);
+                mecha.AddConsumptionStat(id,count,nearestFactory);
+            }
             public static void Postfix(int itemId) {
                 if(itemId==2301){
-                    GameMain.mainPlayer.TryAddItemToPackage(1202, 30+150-10, 0, true, 0);//磁线圈，升级用，有10个多余（因为我们已经支付了这一项科技的成本）
-                    GameMain.mainPlayer.TryAddItemToPackage(1301, 40+220, 0, true, 0);//电路板，升级用
-                    GameMain.mainPlayer.TryAddItemToPackage(1201, 20+  0, 0, true, 0);//  齿轮，升级用
-                    GameMain.mainPlayer.TryAddItemToPackage(1101,  0+ 20, 0, true, 0);//  铁块，升级用
-                    GameMain.mainPlayer.TryAddItemToPackage(1104,  0+ 20, 0, true, 0);//  铜块，升级用
-                    GameMain.mainPlayer.TryAddItemToPackage(1203,  0+ 60, 0, true, 0);//电动机，升级用
-                    GameMain.mainPlayer.TryAddItemToPackage(1006,  0+210, 0, true, 0);//  煤矿，升级用
-                    GameMain.mainPlayer.TryAddItemToPackage(1103,  0+120, 0, true, 0);//  钢材，升级用
-                    GameMain.mainPlayer.TryAddItemToPackage(1030,  0+ 60, 0, true, 0);//  木材，升级用
-                    GameMain.mainPlayer.TryAddItemToPackage(1109,  0+ 60, 0, true, 0);//高能石墨升级用
-                    GameMain.mainPlayer.TryAddItemToPackage(2901,  49, 0, true, 0);//矩阵研究站，49个
-                    GameMain.mainPlayer.TryAddItemToPackage(2104,  10, 0, true, 0);//物流站，10个
-                    GameMain.mainPlayer.TryAddItemToPackage(5002, 100, 0, true, 0);//大飞机，100个
-                    GameMain.mainPlayer.TryAddItemToPackage(2003, 300, 0, true, 0);//蓝带，300个
-//                     GameMain.mainPlayer.TryAddItemToPackage(2001,   1, 0, true, 0);//黄带，1个，用于治疗强迫症
-                    GameMain.mainPlayer.TryAddItemToPackage(6001,1000, 0, true, 0);
-                    GameMain.mainPlayer.TryAddItemToPackage(6002,1000, 0, true, 0);
-                    GameMain.mainPlayer.TryAddItemToPackage(6003,1000, 0, true, 0);
-                    GameMain.mainPlayer.TryAddItemToPackage(6004,1000, 0, true, 0);
-                    GameMain.mainPlayer.TryAddItemToPackage(6005,1000, 0, true, 0);
-                    GameMain.mainPlayer.TryAddItemToPackage(6001,50000, 0, true, 0);
-                    GameMain.mainPlayer.TryAddItemToPackage(6002,50000, 0, true, 0);
-                    GameMain.mainPlayer.TryAddItemToPackage(6003,50000, 0, true, 0);
-                    GameMain.mainPlayer.TryAddItemToPackage(6004,40000, 0, true, 0);
-                    GameMain.mainPlayer.TryAddItemToPackage(6005,40000, 0, true, 0);
+                    PlanetFactory nearestFactory = GameMain.mainPlayer.nearestFactory;
+                    Mecha mecha = GameMain.mainPlayer.mecha;
+                    GameHistoryDataGainTechAwards.AddStats(ref mecha,nearestFactory,1120,5000000);//氢
+                    GameHistoryDataGainTechAwards.AddStats(ref mecha,nearestFactory,1121,1000000);//重氢
+                    GameHistoryDataGainTechAwards.AddStats(ref mecha,nearestFactory,1126, 100000);//卡晶
+                    GameHistoryDataGainTechAwards.AddStats(ref mecha,nearestFactory,1304,  50000);//阴间过滤器
+                    GameHistoryDataGainTechAwards.AddItems(1202, 30+150-10);//磁线圈，升级用，有10个多余（因为我们已经支付了这一项科技的成本）
+                    GameHistoryDataGainTechAwards.AddItems(1301, 40+220);//电路板，升级用
+                    GameHistoryDataGainTechAwards.AddItems(1201, 20+  0);//  齿轮，升级用
+                    GameHistoryDataGainTechAwards.AddItems(1101,  0+ 20);//  铁块，升级用
+                    GameHistoryDataGainTechAwards.AddItems(1104,  0+ 20);//  铜块，升级用
+                    GameHistoryDataGainTechAwards.AddItems(1203,  0+ 60);//电动机，升级用
+                    GameHistoryDataGainTechAwards.AddItems(1006,  0+210);//  煤矿，升级用
+                    GameHistoryDataGainTechAwards.AddItems(1103,  0+120);//  钢材，升级用
+                    GameHistoryDataGainTechAwards.AddItems(1030,  0+ 60);//  木材，升级用
+                    GameHistoryDataGainTechAwards.AddItems(1109,  0+ 60);//高能石墨升级用
+                    GameHistoryDataGainTechAwards.AddItems(2901,  49);//矩阵研究站，49个
+                    GameHistoryDataGainTechAwards.AddItems(2104,  10);//物流站，10个
+                    GameHistoryDataGainTechAwards.AddItems(5002, 100);//大飞机，100个
+                    GameHistoryDataGainTechAwards.AddItems(2003, 300);//蓝带，300个
+//                     GameHistoryDataGainTechAwards.AddItems(2001,   1);//黄带，1个，用于治疗强迫症
+                    GameHistoryDataGainTechAwards.AddItems(6001,1000);
+                    GameHistoryDataGainTechAwards.AddItems(6002,1000);
+                    GameHistoryDataGainTechAwards.AddItems(6003,1000);
+                    GameHistoryDataGainTechAwards.AddItems(6004,1000);
+                    GameHistoryDataGainTechAwards.AddItems(6005,1000);
+                    GameHistoryDataGainTechAwards.AddItems(6001,50000);
+                    GameHistoryDataGainTechAwards.AddItems(6002,50000);
+                    GameHistoryDataGainTechAwards.AddItems(6003,50000);
+                    GameHistoryDataGainTechAwards.AddItems(6004,40000);
+                    GameHistoryDataGainTechAwards.AddItems(6005,40000);
                 }
             }
         }
