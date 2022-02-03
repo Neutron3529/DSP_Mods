@@ -407,7 +407,7 @@ namespace PowerFull
             public static void AddItems(int id,int count){
                 if(dict.ContainsKey(id)){
                     int[,] x=dict[id];
-                    var len=x.GetLength(0);
+                    int len=x.GetLength(0);
                     for (int i = 0; i < len; i++){
                         StorageComponentTakeTailItems.AddItems(x[i,0],count*x[i,1]);
                         mecha.AddConsumptionStat(x[i,0],count*x[i,1],nearestFactory);
@@ -431,7 +431,7 @@ namespace PowerFull
                     case 6006 :
                         nearestFactory = GameMain.mainPlayer.nearestFactory;
                         mecha = GameMain.mainPlayer.mecha;
-                        StorageComponentTakeTailItems.AddStats(itemId,count);
+                        StorageComponentTakeTailItems.AddItems(itemId,count);
                         return false;
                     default : /* 可选的 */
                     return true;
