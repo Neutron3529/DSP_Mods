@@ -151,10 +151,14 @@ namespace PowerFull
                 logger("PowerFull-去除地形限制-加载完成");
 #endif
             }
-            if ((Config.Bind<bool>("config", "inf_matrix", true, "特定物品的消耗改为虚空创造").Value)){
+            if ((Config.Bind<bool>("config", "inf_matrix", false, "特定物品的消耗改为虚空创造").Value)){
                 harmony.PatchAll(typeof(StorageComponentTakeTailItems));
 #if DEBUG
                 logger("PowerFull-特定物品的消耗改为虚空创造-加载完成");
+#endif
+            }else{
+#if DEBUG
+                logger("PowerFull-特定物品的消耗改为虚空创造-默认不加载");
 #endif
             }
 #if DEBUG
