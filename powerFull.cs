@@ -21,7 +21,7 @@ if [ -z "$__DOTNET_CSC" ]; then
     echo "manually, or this alert will occur each time you execute this script."
 fi
 
-__MODE_VERBOSE=75 # is the line number of "#define VERBOSE", may be modified
+__MODE_VERBOSE=77 # is the line number of "#define VERBOSE", may be modified
 __MODE_DEBUG__=$((__MODE_VERBOSE+1))
 __MODE_RELEASE=$((__MODE_DEBUG__+1))
 
@@ -72,6 +72,7 @@ if [ -n "$2" ]; then
     git push
 fi
 exit
+
 
 #define VERBOSE // the line of __MODE_VERBOSE
 #define DEBUG
