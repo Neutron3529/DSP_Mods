@@ -95,6 +95,7 @@ namespace PowerFull
     [BepInPlugin("Neutron3529.Cheat", "PowerFull", "0.2.2")]
     public class PowerFull : BaseUnityPlugin {
         public static float power_mul=10.0f;
+        public static int techSpeed=900000000;
 #if DEBUG
         public static Action<string> logger;
 #endif
@@ -133,7 +134,7 @@ namespace PowerFull
                 logger("PowerFull-机甲自由曲速-加载完成");
 #endif
             }
-            if ((Config.Bind<bool>("config", "MechaLabGameTick", true, "机甲研究室加速研究（CodeMatcher）").Value)){
+            if ((techSpeed=Config.Bind<int>("config", "MechaLabtechSpeed", 900000000, "机甲研究室研究速度（CodeMatcher）").Value)>0){
                 harmony.PatchAll(typeof(MechaLabGameTick));
 #if DEBUG
                 logger("PowerFull-机甲研究室加速研究-加载完成");
@@ -287,7 +288,7 @@ namespace PowerFull
                     ).Advance(1).SetAndAdvance(
                         OpCodes.Pop,null
                     ).SetAndAdvance(
-                        OpCodes.Ldc_I4,1440000
+                        OpCodes.Ldc_I4,techSpeed
                     ).InstructionEnumeration();
             }
         }
