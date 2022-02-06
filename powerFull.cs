@@ -196,10 +196,17 @@ namespace PowerFull
                     ).InstructionEnumeration();
             }
         }
-
-        [HarmonyPatch(typeof(FactorySystem), "GameTick", new Type[]{ typeof(long), typeof(bool) })]
-        [HarmonyPatch(typeof(FactorySystem), "GameTick", new Type[]{ typeof(long), typeof(bool), typeof(int), typeof(int), typeof(int) })]
+        [HarmonyPatch]
+//         [HarmonyPatch(typeof(FactorySystem), "GameTick", new Type[]{ typeof(long), typeof(bool) })]
+//         [HarmonyPatch(typeof(FactorySystem), "GameTick", new Type[]{ typeof(long), typeof(bool), typeof(int), typeof(int), typeof(int) })]
         public static class FactorySystemGameTick {// used for 2  FactorySystem functions.
+            static IEnumerable<MethodBase> TargetMethods()
+            {
+                MethodInfo[] m=typeof(FactorySystem).GetMethods();
+                foreach(MethodInfo i in m)if(i.Name=="GameTick"){
+                    yield return i;
+                }
+            }
             static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
                 return new CodeMatcher(instructions)
                     .MatchForward(false, // false = move at the start of the match, true = move at the end of the match
@@ -280,7 +287,7 @@ namespace PowerFull
                     ).Advance(1).SetAndAdvance(
                         OpCodes.Pop,null
                     ).SetAndAdvance(
-                        OpCodes.Ldc_I4,14400
+                        OpCodes.Ldc_I4,1440000
                     ).InstructionEnumeration();
             }
         }
@@ -364,9 +371,13 @@ namespace PowerFull
                 }
             }
         }
-        [HarmonyPatch(typeof(BuildTool_Click), "CheckBuildConditions")]
-        [HarmonyPatch(typeof(BuildTool_BlueprintPaste), "CheckBuildConditions")]
+        [HarmonyPatch]
         class BuildTool_ClickBuildTool_BlueprintPasteCheckBuildConditions {
+            static IEnumerable<MethodBase> TargetMethods()
+            {
+                yield return typeof(BuildTool_Click).GetMethod("CheckBuildConditions", AccessTools.all);
+                yield return typeof(BuildTool_BlueprintPaste).GetMethod("CheckBuildConditions", AccessTools.all);
+            }
             static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
                 return new CodeMatcher(instructions)
                     .MatchForward(false, // false = move at the start of the match, true = move at the end of the match
